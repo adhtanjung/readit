@@ -1,0 +1,4 @@
+fragment RUser on User {
+	id
+	username
+}
