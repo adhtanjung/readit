@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Link } from "@chakra-ui/react";
-import { Form, Formik } from "formik";
+import { Form, Formik, useField } from "formik";
 import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
 import React from "react";
@@ -13,6 +13,7 @@ import NextLink from "next/link";
 const Login: React.FC<{}> = ({}) => {
 	const router = useRouter();
 	const [, login] = useLoginMutation();
+	console.log(router);
 	return (
 		<Wrapper variant="small">
 			<Formik
@@ -22,7 +23,11 @@ const Login: React.FC<{}> = ({}) => {
 					if (response.data?.login.errors) {
 						setErrors(toErrorMap(response.data.login.errors));
 					} else if (response.data?.login.user) {
-						router.push("/");
+						if (typeof router.query.next === "string") {
+							router.push(router.query.next);
+						} else {
+							router.push("/");
+						}
 					}
 				}}
 			>
