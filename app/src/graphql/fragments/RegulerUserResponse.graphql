@@ -1,0 +1,8 @@
+fragment RegulerUserResponse on UserResponse {
+	errors {
+		...RError
+	}
+	user {
+		...RUser
+	}
+}
