@@ -17,7 +17,6 @@ const errorExchange: Exchange =
 		return pipe(
 			forward(ops$),
 			tap(({ error }) => {
-				console.log(error?.message);
 				if (error?.message.includes("Not authorized")) {
 					Router.replace("/login");
 				}
@@ -43,15 +42,24 @@ export const cursorPagination = (): Resolver => {
 		if (size === 0) {
 			return undefined;
 		}
+		let hasMore = true;
 		const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
-		const isItInTheCache = cache.resolve(entityKey, fieldKey);
+		const isItInTheCache = cache.resolve(
+			cache.resolve(entityKey, fieldKey) as string,
+			"posts"
+		);
 		info.partial = !isItInTheCache;
 		const results: string[] = [];
 		fieldInfos.forEach((fi) => {
-			const data = cache.resolve(entityKey, fi.fieldKey) as string[];
+			const key = cache.resolve(entityKey, fi.fieldKey) as string;
+			const data = cache.resolve(key, "posts") as string[];
+			const _hasMore = cache.resolve(key, "hasMore");
+			if (!_hasMore) {
+				hasMore = _hasMore as boolean;
+			}
 			results.push(...data);
 		});
-		return results;
+		return { __typename: "PaginatedPosts", hasMore, posts: results };
 		// 	const visited = new Set();
 		// 	let result: NullArray<string> = [];
 		// 	let prevOffset: number | null = null;
@@ -107,6 +115,9 @@ export const createUrqlClient = (ssrExchange: any) => ({
 		dedupExchange,
 		cacheExchange({
 			resolvers: {
+				keys: {
+					PaginatedPosts: () => null,
+				},
 				Query: {
 					posts: cursorPagination(),
 				},
