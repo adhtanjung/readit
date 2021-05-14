@@ -4,22 +4,54 @@ import { NavBar } from "../components/NavBar";
 import { usePostsQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
 import NextLink from "next/link";
-import { Link } from "@chakra-ui/layout";
+import { Box, Heading, Link, Stack, Text, Flex } from "@chakra-ui/layout";
+import { Button } from "@chakra-ui/button";
 
 const Index = () => {
-	const [{ data }] = usePostsQuery();
+	const [{ data, fetching }] = usePostsQuery({
+		variables: {
+			limit: 10,
+		},
+	});
+
+	if (!data && !fetching) {
+		return <Heading>Something went wrong.</Heading>;
+	}
+
 	return (
 		<Layout>
-			<NextLink href="/create-post">
-				<Link>create post</Link>
-			</NextLink>
-			<div>hello world</div>
+			<Flex align="center">
+				<Heading>Readit</Heading>
+				<NextLink href="/create-post">
+					<Link ml="auto">create post</Link>
+				</NextLink>
+			</Flex>
 			<br />
-			{!data ? (
+			{!data && fetching ? (
 				<div>loading...</div>
 			) : (
-				data.posts.map((p) => <div key={p.id}>{p.title}</div>)
+				<Stack spacing={8}>
+					{data!.posts.map((p) => (
+						<Box
+							key={p.id}
+							p={5}
+							shadow="md"
+							borderWidth="1px"
+							borderRadius="lg"
+						>
+							<Heading fontSize="xl">{p.title}</Heading>
+							<Text mt={4}>{p.textSnippet}...</Text>
+						</Box>
+					))}
+				</Stack>
 			)}
+			{data ? (
+				<Flex>
+					<Button isLoading={fetching} color="tan" shadow="md" my={8} mx="auto">
+						load more
+					</Button>
+				</Flex>
+			) : null}
 		</Layout>
 	);
 };
