@@ -26,6 +26,7 @@ const isAuth_1 = require("../middleware/isAuth");
 const type_graphql_1 = require("type-graphql");
 const Post_1 = require("../entities/Post");
 const typeorm_1 = require("typeorm");
+const Updoot_1 = require("../entities/Updoot");
 let PostInput = class PostInput {
 };
 __decorate([
@@ -53,25 +54,45 @@ PaginatedPosts = __decorate([
     type_graphql_1.ObjectType()
 ], PaginatedPosts);
 let PostResolver = class PostResolver {
-    textSnippet(root) {
-        return root.text.slice(0, 50);
+    textSnippet(post) {
+        return post.text.slice(0, 50);
     }
     vote(postId, value, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
             const isUpdoot = value !== -1;
             const realValue = isUpdoot ? 1 : -1;
             const { userId } = req.session;
-            yield typeorm_1.getConnection().query(`
-		START TRANSACTION;
+            const updoot = yield Updoot_1.Updoot.findOne({ where: { postId, userId } });
+            if (updoot && updoot.value !== realValue) {
+                yield typeorm_1.getConnection().transaction((tm) => __awaiter(this, void 0, void 0, function* () {
+                    yield tm.query(`
+					update updoot
+					set value = $1
+					where "postId" = $2 and "userId" = $3
 
-		insert into updoot ("userId", "postId", value)
-		values (${userId}, ${postId}, ${realValue});
+					`, [realValue, postId, userId]);
+                    yield tm.query(`
+					update post
+					set points= points + $1
+					where id = $2
 
-		update post
-		set points= points+ ${realValue}
-		where id =${postId};
-		COMMIT;
-		`);
+					`, [2 * realValue, postId]);
+                }));
+            }
+            else if (!updoot) {
+                yield typeorm_1.getConnection().transaction((tm) => __awaiter(this, void 0, void 0, function* () {
+                    yield tm.query(`insert into updoot ("userId", "postId", value)
+		 			 values ($1,$2,$3);
+
+					`, [userId, postId, realValue]);
+                    yield tm.query(`
+				update post
+				set points= points + $1
+				where id = $2
+
+				`, [realValue, postId]);
+                }));
+            }
             return true;
         });
     }
